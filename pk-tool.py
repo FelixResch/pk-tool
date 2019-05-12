@@ -107,7 +107,7 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
 
         group_names = sorted([o for o in os.listdir(tutor_repo(self.config))
                               if os.path.isdir(os.path.join(tutor_repo(self.config), o)) and o != '.git'
-                              and o != 'templates'])
+                              and o != 'templates' and o != 'Stundenlisten' and o != 'Erfahrungsbericht'])
 
         if group_names:
             self.group_combobox.currentIndexChanged.disconnect()

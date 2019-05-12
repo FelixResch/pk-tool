@@ -11,3 +11,4 @@ build/
 **.pro.user
 **.ini
 !LICENSE.txt
+/venv/

@@ -64,6 +64,10 @@ class LessonTable(QTableWidget):
         """
         Clear the table and history, refill the table with column names, and students default data.
         """
+
+        if ue == '':
+            return
+
         self.react_lock = True
         self.current_ue = ue
 

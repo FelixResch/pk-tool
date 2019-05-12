@@ -209,7 +209,7 @@ def escape_csv_string(string):
 
 
 def validate_headers(headers):
-    return all({k == headers[k]: headers[k] for k in headers})
+    return all({k == headers[k]: headers[k] for k in headers if not k == 'invalid'})
 
 
 def check_row(row):
@@ -245,7 +245,7 @@ def student_info(config, group):
     stud_csv = students_csv(config, group)
     students = {}
 
-    with open(stud_csv, 'r') as infile:
+    with open(stud_csv, 'r', encoding='utf-8') as infile:
         reader = csv.DictReader(infile, students_csv_fieldnames(), KEY_INVALID, strict=True)
 
         headers = next(reader, None)

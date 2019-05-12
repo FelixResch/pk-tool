@@ -38,11 +38,12 @@ class Group:
         if ue not in self.attendance:
             attendance_csv_file = attendance_csv(self.config, self.name, ue)
             self.attendance[ue] = {}
-            with open(attendance_csv_file, 'r') as infile:
+            with open(attendance_csv_file, 'r', encoding='utf-8') as infile:
                 reader = csv.DictReader(infile, attendance_csv_fieldnames(ue), KEY_INVALID, strict=True)
 
                 headers = next(reader, None)
                 if not validate_headers(headers):
+                    print("Invalid headers: ", headers)
                     exit(1)
 
                 for row in reader:
