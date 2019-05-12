@@ -1,10 +1,11 @@
 import io
 from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QWidget, QCheckBox, QHBoxLayout
-from src.group import Group
+from src.group import Group, AttendanceType, attendance_csv_fieldnames, KEY_UE_ATTENDED
 from src.group_infos import Student
 from src.history import History
-
+from ep2_tutors.common import *
 
 class LessonTable(QTableWidget):
     """
@@ -30,6 +31,7 @@ class LessonTable(QTableWidget):
         self.group = None
         self.write_console = None
         self.test_file = False
+        self.current_ue = None
 
         self.cellChanged.connect(self.react_to_change)
 
@@ -49,62 +51,78 @@ class LessonTable(QTableWidget):
         Change the count of the attendance column.
         """
         if not self.react_lock:
-            self.history.record_changes(self.get_current_data())
+            # self.history.record_changes(self.get_current_data())
             self.export_csv()
 
-            count = sum(self.get_checkbox(index).isChecked() for index in range(self.rowCount()))
+            count = sum(self.get_checkbox(index).checkState() == Qt.Checked for index in range(self.rowCount()))
             attendance = 'Anwesend {}/{}'.format(count, self.rowCount())
             self.setHorizontalHeaderItem(3, QTableWidgetItem(attendance))
 
-            self.history.adjust_undo_redo()
+            # self.history.adjust_undo_redo()
 
-    def setup_table(self, group: Group):
+    def setup_table(self, group: Group, ue):
         """
         Clear the table and history, refill the table with column names, and students default data.
         """
         self.react_lock = True
+        self.current_ue = ue
 
         self.clear()
         self.setRowCount(0)
 
         self.group = group
-        labels = 'Name;Matrikelnr.;Gruppe;Anwesend 00/00;Adhoc;Kommentar'.split(';')
+        labels = 'Nachname;Vorname;Matrikelnr.;Anwesend 00/00'.split(';')
         self.setColumnCount(len(labels))
         self.setSortingEnabled(False)
         self.setHorizontalHeaderLabels(labels)
 
         for student in group.students:
-            self.add_row_to_table(student)
+            self.add_row_to_table(group, group.students[student])
 
         self.history = History(self.action_undo, self.action_redo, self.write_console, self.group_infos)
 
-    def add_row_to_table(self, student: Student):
+        self.resizeColumnsToContents()
+        self.setSortingEnabled(True)
+        self.sortByColumn(2, QtCore.Qt.AscendingOrder)
+
+        self.react_lock = False
+        self.react_to_change()
+
+    def add_row_to_table(self, group, student):
         """
         Adds a new row to the table and fills this row with item-widgets filled with the student's data.
         """
         idx = self.rowCount()
         self.setRowCount(idx + 1)
 
-        name_item = QTableWidgetItem(student.name)
-        name_item.setFlags(name_item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.setItem(idx, 0, name_item)
+        last_name_item = QTableWidgetItem(student[KEY_STUDENT_NAME_LAST])
+        last_name_item.setFlags(last_name_item.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.setItem(idx, 0, last_name_item)
 
-        matrikelnr_item = QTableWidgetItem(student.matrikelnr)
+        first_name_item = QTableWidgetItem(student[KEY_STUDENT_NAME_FIRST])
+        first_name_item.setFlags(first_name_item.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.setItem(idx, 1, first_name_item)
+
+        matrikelnr_item = QTableWidgetItem(student[KEY_STUDENT_ID])
         matrikelnr_item.setFlags(matrikelnr_item.flags() & ~QtCore.Qt.ItemIsEditable)
         matrikelnr_item.setTextAlignment(QtCore.Qt.AlignCenter)
-        self.setItem(idx, 1, matrikelnr_item)
-
-        group_item = QTableWidgetItem(student.group_name)
-        group_item.setFlags(matrikelnr_item.flags() & ~QtCore.Qt.ItemIsEditable)
-        group_item.setTextAlignment(QtCore.Qt.AlignCenter)
-        self.setItem(idx, 2, group_item)
+        self.setItem(idx, 2, matrikelnr_item)
 
         check_item = QTableWidgetItem()
         check_item.setTextAlignment(QtCore.Qt.AlignCenter)
         self.setItem(idx, 3, check_item)
         check_widget = QWidget()
         chk_bx = QCheckBox()
-        chk_bx.setCheckState(QtCore.Qt.Unchecked)
+
+        attendance = group.attended(student[KEY_STUDENT_ID], self.current_ue)
+
+        if attendance == AttendanceType.ATTENDED:
+            chk_bx.setCheckState(QtCore.Qt.Checked)
+        elif attendance == AttendanceType.ABSENT:
+            chk_bx.setCheckState(QtCore.Qt.Unchecked)
+        else:
+            chk_bx.setCheckState(QtCore.Qt.PartiallyChecked)
+
         chk_bx.stateChanged.connect(self.react_to_change)
         lay_out = QHBoxLayout(check_widget)
         lay_out.addWidget(chk_bx)
@@ -113,109 +131,37 @@ class LessonTable(QTableWidget):
         check_widget.setLayout(lay_out)
         self.setCellWidget(idx, 3, check_widget)
 
-        adhoc_item = QTableWidgetItem()
-        adhoc_item.setTextAlignment(QtCore.Qt.AlignCenter)
-        self.setItem(idx, 4, adhoc_item)
-
-        self.setItem(idx, 5, QTableWidgetItem())
-
     def get_checkbox(self, index):
         """
         Returns the checkbox for a specific index
         """
         return self.cellWidget(index, 3).layout().itemAt(0).widget()
 
-    def load_csv_file(self, path, test_file=False):
-        """
-        Load a lesson-csv-file and update the table with it's data
-        """
-        self.setSortingEnabled(False)
-        self.react_lock = True
-
-        self.test_file = test_file
-
-        try:
-            with open(path, 'r', encoding='utf-8') as file:
-                next(file)  # skip header
-                for line in file:
-                    matrikelnr, group_name, attendance, comment = line.strip().split(';')
-                    if not test_file:
-                        adhoc, *comment = comment.split()
-                        adhoc = adhoc.strip('%')
-                        if adhoc == '0':
-                            adhoc = ''
-                        comment = ' '.join(comment)
-                    else:
-                        adhoc = ''
-
-                    idx = self.index_of_student(matrikelnr)
-                    if idx < 0:
-                        idx = self.rowCount()
-                        new_student = self.group_infos.get_student(matrikelnr)
-                        if test_file:
-                            new_student = Student(new_student.name, new_student.matrikelnr, new_student.email,
-                                                  self.group.name)
-
-                        self.add_row_to_table(new_student)
-
-                    self.item(idx, 1).setText(matrikelnr)
-                    self.item(idx, 2).setText(group_name)
-                    self.get_checkbox(idx).setCheckState(QtCore.Qt.Checked if attendance == 'an' else
-                                                         QtCore.Qt.Unchecked)
-                    self.item(idx, 4).setText(adhoc)
-                    self.item(idx, 5).setText(comment)
-        except FileNotFoundError:
-            pass
-
-        self.resizeColumnsToContents()
-        self.setSortingEnabled(True)
-        self.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        self.react_lock = False
-        self.history.current_data = self.get_current_data()
-        self.history.adjust_undo_redo()
-
-    def new_student(self, matrikelnr):
-        """
-        Adds a new row for a new student to the table.
-        """
-        self.react_lock = True
-        self.setSortingEnabled(False)
-
-        student = self.group_infos.get_student(matrikelnr)
-        if self.test_file:
-            student = Student(student.name, student.matrikelnr, student.email, self.group.name)
-
-        self.add_row_to_table(student)
-        text = '{} hinzugefügt'.format(student.name)
-        self.history.add_change((matrikelnr, text, 1, None, student))
-        self.export_csv()
-
-        self.setSortingEnabled(True)
-        self.react_lock = False
-
     def export_csv(self):
         """
         Write the opened table to a csv-file
         """
-        path = self.get_csv_path()
+        ue = self.current_ue
+        att_csv_file = attendance_csv(self.group.config, self.group.name, ue)
+        with open(att_csv_file, 'w') as outfile:
+            if six.PY2:
+                writer = csv.DictWriter(outfile, fieldnames=attendance_csv_fieldnames(ue), encoding='utf-8',
+                                        lineterminator='\n')
+            else:
+                writer = csv.DictWriter(outfile, fieldnames=attendance_csv_fieldnames(ue), lineterminator='\n')
 
-        # read file so it can keep the order of the lines
-        order = dict()
-        with open(path, 'r', encoding='utf-8') as f:
-            next(f)
-            for idx, line in enumerate(f):
-                matrikelnr = line.split(';')[0]
-                order[matrikelnr] = idx
+            writer.writeheader()
 
-        with io.open(path, 'w', encoding='utf-8', newline='') as f:
-            f.write('MatrNr;Gruppe;Kontrolle;Kommentar\n')
-            data = self.get_current_data()
-            data.sort(key=lambda t: order.get(t[0], 999))
-            for d in data:
-                if self.test_file:
-                    f.write('{};{};{};{}\n'.format(d[0], d[1], d[2], d[4]))
-                else:
-                    f.write('{};{};{};{}% {}\n'.format(*d))
+            for idx in range(self.rowCount()):
+                student_id = self.item(idx, 2).text()
+                if self.get_checkbox(idx).checkState() == Qt.Checked:
+                    attended = '1'
+                elif self.get_checkbox(idx).checkState() == Qt.Unchecked:
+                    attended = '0'
+                elif self.get_checkbox(idx).checkState() == Qt.PartiallyChecked:
+                    attended = '_'
+
+                writer.writerow({KEY_STUDENT_ID: student_id, KEY_UE_ATTENDED % ue: attended})
 
     def index_of_student(self, identification):
         """

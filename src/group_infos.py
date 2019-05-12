@@ -97,11 +97,7 @@ class GroupInfos:
                     if line.startswith(title) and '=' in line:
                         info[title] = line.split('=')[-1].strip()
 
-            self.groups[group_name] = Group(name=group_name,
-                                            instructor=info.get('leiter', ''),
-                                            tutor1=info.get('tutor1', ''),
-                                            tutor2=info.get('tutor2', ''),
-                                            substitute=info.get('ersatz', ''))
+            self.groups[group_name] = Group(name=group_name)
 
     def __read_student_lists(self):
         """

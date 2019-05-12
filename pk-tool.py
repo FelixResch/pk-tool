@@ -1,9 +1,9 @@
-import os
+import re
 import sys
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow, QInputDialog, QMessageBox
 from ui.mainwindow import Ui_MainWindow
-from src.group_infos import GroupInfos
+from src.group_infos import GroupInfos, Student
 from src.settings import Settings
 from dialog.settingsdialog import SettingsDialog
 from src.git_interactions import GitInteractions
@@ -11,6 +11,7 @@ from dialog.gitdialog import GitDialog
 from dialog.load_test_dialog import LoadTestDialog
 from src.group import Group
 from dialog.create_csv import CreateCSVDialog
+from ep2_tutors.common import *
 
 
 class PkToolMainWindow(QMainWindow, Ui_MainWindow):
@@ -25,6 +26,8 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
+        self.config = create_config()
+
         self.group_infos = GroupInfos(repo_path='')
         self.csv_files = dict()
 
@@ -33,10 +36,9 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
 
         self.file_combobox.currentIndexChanged.connect(self.load_group_data)
         self.group_combobox.currentIndexChanged.connect(self.populate_files)
-        self.group_type_combobox.currentIndexChanged.connect(self.fill_group_names_combobox)
+        # self.group_type_combobox.currentIndexChanged.connect(self.fill_group_names_combobox)
         self.console.returnPressed.connect(self.execute_console)
         self.action_new.triggered.connect(self.new_csv)
-        self.action_add_student.triggered.connect(self.new_student)
         self.action_undo.triggered.connect(self.table_widget.undo_history)
         self.action_redo.triggered.connect(lambda: self.table_widget.undo_history(True))
         self.action_about.triggered.connect(self.show_about)
@@ -76,16 +78,10 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         Opens a dialog that allows to load a registration file for a test and loads the test attendance csv-files.
         """
-        load_test_mode_dialog = LoadTestDialog(self.settings)
-        if load_test_mode_dialog.exec_():
-            for group in load_test_mode_dialog.selected_groups:
-                self.table_widget.group_infos.groups[group.name] = group
-            self.group_type_combobox.setCurrentIndex(4)
-            self.populate_files()
+        pass
 
     def test_mode(self):
-        self.group_type_combobox.setDisabled(True)
-        self.action_new.setDisabled(True)
+        pass
 
     def read_repo(self):
         """
@@ -96,12 +92,6 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         self.table_widget.connect(self.group_infos, self.action_undo, self.action_redo,
                                   self.get_csv_path, self.write_console)
 
-        self.group_type_combobox.currentIndexChanged.disconnect()
-
-        self.group_type_combobox.clear()
-        self.group_type_combobox.addItems('Meine Alle Normal Fortgeschritten Tests'.split())
-
-        self.group_type_combobox.currentIndexChanged.connect(self.fill_group_names_combobox)
         self.fill_group_names_combobox()
 
     def write_console(self, text):
@@ -114,50 +104,21 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         Populate the combobox with all the group names, that apply for the group type specified in the form.
         """
-        type_index = self.group_type_combobox.currentIndex()
 
-        if type_index == 0:
-            tutor_name = self.settings.username
-            group_names = self.group_infos.get_involved_groups(tutor_name)
-        elif type_index < 4:
-            allowed_types = []
-            if type_index == 1:
-                allowed_types = ['normal', 'fortgeschritten']
-            elif type_index == 2:
-                allowed_types = ['normal']
-            elif type_index == 3:
-                allowed_types = ['fortgeschritten']
-            group_names = self.group_infos.get_group_names(allowed_types=allowed_types)
-        else:
-            path_to_folders = '{}/Anwesenheiten/Tests/'.format(self.settings.repo_path)
-            group_names = sorted(os.listdir(path_to_folders))
-            self.test_mode()
+        group_names = sorted([o for o in os.listdir(tutor_repo(self.config))
+                              if os.path.isdir(os.path.join(tutor_repo(self.config), o)) and o != '.git'
+                              and o != 'templates'])
 
         if group_names:
             self.group_combobox.currentIndexChanged.disconnect()
 
             self.group_combobox.clear()
-            if type_index < 4:
-                group_names.sort(key=lambda name: ('mo di mi do fr'.split().index(name[:2]), name[2:]))
-                self.label_group.setText('Gruppe:')
-                self.label_file.setText('Übung:')
-            else:
-                group_names.sort()
-                self.label_group.setText('Testnummer:')
-                self.label_file.setText('Slot:')
 
             self.group_combobox.addItems(group_names)
 
             self.group_combobox.currentIndexChanged.connect(self.populate_files)
             self.populate_files()
 
-    def new_student(self):
-        """
-        Adds a new student to the current table.
-        """
-        matrikelnr, ok = QInputDialog.getText(self, 'Neuen Studenten hinzufügen', 'Matrikelnummer:')
-        if ok and matrikelnr:
-            self.table_widget.new_student(matrikelnr)
 
     def load_group_data(self):
         """
@@ -165,23 +126,25 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         It updates the names of the instructor and tutors and loads the last available csv-file for this group.
         """
         group_name = self.group_combobox.currentText()
-        try:
-            info = self.group_infos.get_group_info(group_name)
-            self.label_instructor_name.setText(info.instructor)
-            self.label_tutor1_name.setText(info.tutor1)
-            self.label_tutor2_name.setText(info.tutor2)
-        except KeyError:
-            pass
+        # try:
+        #     info = self.group_infos.get_group_info(group_name)
+        #     self.label_instructor_name.setText(info.instructor)
+        #     self.label_tutor1_name.setText(info.tutor1)
+        #     self.label_tutor2_name.setText(info.tutor2)
+        # except KeyError:
+        #     pass
 
-        group = self.group_infos.get_group_info(group_name)
-        if self.group_type_combobox.currentIndex() == 4:
-            group = Group(self.file_combobox.currentText())
+        group = Group(group_name, self.config, student_info(self.config, group_name))
+        # if self.group_type_combobox.currentIndex() == 4:
+        #     group = Group(self.file_combobox.currentText())
 
-        self.table_widget.setup_table(group)
-        if self.file_combobox.count():
-            self.table_widget.load_csv_file(self.get_csv_path(), self.group_type_combobox.currentIndex() == 4)
-        else:
-            self.table_widget.clear()
+        # ue = re.findall('attendance_(\\d*).csv', )[0]
+
+        self.table_widget.setup_table(group, self.file_combobox.currentText())
+        # if self.file_combobox.count():
+        #    self.table_widget.load_csv_file(self.get_csv_path(), False)
+        # else:
+        #    self.table_widget.clear()
 
     def get_email(self):
         """
@@ -218,22 +181,15 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         Finds the csv files for this group and populates the combobox
         """
-        self.file_combobox.currentIndexChanged.disconnect()
+        group_name = self.group_combobox.currentText()
+        self.file_combobox.clear()
 
-        if (self.group_type_combobox.currentIndex() < 4):
-            group_name = self.group_combobox.currentText()
-            self.csv_files = self.get_csv_files(group_name)
-
-            self.file_combobox.clear()
-            self.file_combobox.addItems(sorted(self.csv_files.keys()))
-            self.file_combobox.setCurrentIndex(self.file_combobox.count() - 1)
-        else:
-            test_folder = self.group_combobox.currentText()
-            self.csv_files = self.get_test_files(test_folder)
-            self.file_combobox.clear()
-            self.file_combobox.addItems(sorted(self.csv_files.keys()))
-            self.file_combobox.setCurrentIndex(0)
-
+        files = sorted([re.findall('attendance_(\\d*).csv', o)[0]
+                        for o in os.listdir(os.path.join(tutor_repo(self.config), group_name))
+                        if os.path.isfile(os.path.join(tutor_repo(self.config), group_name,  o))
+                        and o.startswith('attendance_')])
+        self.file_combobox.addItems(files)
+        self.file_combobox.setCurrentIndex(self.file_combobox.count() - 1)
         self.file_combobox.currentIndexChanged.connect(self.load_group_data)
         self.load_group_data()
 

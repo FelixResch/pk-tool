@@ -10,3 +10,4 @@ build/
 **.pro
 **.pro.user
 **.ini
+!LICENSE.txt
