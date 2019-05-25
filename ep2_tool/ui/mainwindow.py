@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 class Ui_MainWindow(object):
@@ -156,7 +156,7 @@ class Ui_MainWindow(object):
         self.action_load_test_applications.setToolTip(_translate("MainWindow", "Lade Test-Anmeldungen"))
 
 
-from src.lessontable import LessonTable
+from ep2_tool.lessontable import LessonTable
 
 
 if __name__ == "__main__":

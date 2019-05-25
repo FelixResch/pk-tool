@@ -1,8 +1,8 @@
 import os
 import io
 from PyQt5.QtWidgets import QDialog
-from ui.create_csv_dialog import Ui_CreateCSVDialog
-from src.settings import Settings
+from ep2_tool.ui.create_csv_dialog import Ui_CreateCSVDialog
+from ep2_tool.settings import Settings
 
 
 class CreateCSVDialog(QDialog, Ui_CreateCSVDialog):

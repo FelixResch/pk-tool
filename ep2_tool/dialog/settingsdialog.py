@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QDialog, QFileDialog
-from ui.settings import Ui_SettingsDialog
-from src.group_infos import GroupInfos
+from ep2_tool.ui.settings import Ui_SettingsDialog
+from ep2_tool.group_infos import GroupInfos
 
 
 class SettingsDialog(QDialog, Ui_SettingsDialog):

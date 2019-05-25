@@ -1,11 +1,9 @@
-import io
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QWidget, QCheckBox, QHBoxLayout
-from src.group import Group, AttendanceType, attendance_csv_fieldnames, KEY_UE_ATTENDED
-from src.group_infos import Student
-from src.history import History
-from ep2_tutors.common import *
+from ep2_tool.group import Group, AttendanceType, attendance_csv_fieldnames, KEY_UE_ATTENDED
+from ep2_tool.history import History
+from ep2_tool.ep2_tutors.common import *
 
 class LessonTable(QTableWidget):
     """

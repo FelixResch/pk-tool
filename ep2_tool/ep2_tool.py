@@ -1,17 +1,16 @@
 import re
 import sys
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QApplication, QMainWindow, QInputDialog, QMessageBox
-from ui.mainwindow import Ui_MainWindow
-from src.group_infos import GroupInfos, Student
-from src.settings import Settings
-from dialog.settingsdialog import SettingsDialog
-from src.git_interactions import GitInteractions
-from dialog.gitdialog import GitDialog
-from dialog.load_test_dialog import LoadTestDialog
-from src.group import Group
-from dialog.create_csv import CreateCSVDialog
-from ep2_tutors.common import *
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from ep2_tool.ui.mainwindow import Ui_MainWindow
+from ep2_tool.group_infos import GroupInfos
+from ep2_tool.settings import Settings
+from ep2_tool.dialog.settingsdialog import SettingsDialog
+from ep2_tool.git_interactions import GitInteractions
+from ep2_tool.dialog.gitdialog import GitDialog
+from ep2_tool.group import Group
+from ep2_tool.dialog.create_csv import CreateCSVDialog
+from ep2_tool.ep2_tutors.common import *
 
 
 class PkToolMainWindow(QMainWindow, Ui_MainWindow):
@@ -241,7 +240,7 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         self.console.clear()
 
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     window = PkToolMainWindow()
     window.show()

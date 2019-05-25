@@ -2,10 +2,10 @@ import os
 import re
 import io
 from PyQt5.QtWidgets import QDialog, QFileDialog
-from ui.load_test_dialog import Ui_LoadTestDialog
-from src.settings import Settings
-from src.group_infos import GroupInfos, Student
-from src.group import Group
+from ep2_tool.ui.load_test_dialog import Ui_LoadTestDialog
+from ep2_tool.settings import Settings
+from ep2_tool.group_infos import GroupInfos, Student
+from ep2_tool.group import Group
 
 
 class LoadTestDialog(QDialog, Ui_LoadTestDialog):

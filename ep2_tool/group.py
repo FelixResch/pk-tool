@@ -1,5 +1,5 @@
 # coding=utf-8
-from ep2_tutors.common import *
+from ep2_tool.ep2_tutors.common import *
 
 if six.PY2:
     import unicodecsv as csv

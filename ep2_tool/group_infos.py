@@ -1,5 +1,5 @@
 import re
-from src.group import Group
+from ep2_tool.group import Group
 from collections import namedtuple
 
 

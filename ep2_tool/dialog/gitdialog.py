@@ -1,7 +1,7 @@
 import re
 from PyQt5.QtWidgets import QDialog, QMessageBox
-from ui.git_interactions import Ui_GitDialog
-from src.git_interactions import GitInteractions
+from ep2_tool.ui.git_interactions import Ui_GitDialog
+from ep2_tool.git_interactions import GitInteractions
 
 
 class GitDialog(QDialog, Ui_GitDialog):
