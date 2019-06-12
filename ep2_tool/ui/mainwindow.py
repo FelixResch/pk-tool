@@ -10,7 +10,7 @@ from PyQt5 import QtCore, QtWidgets
 
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow, mode):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(734, 550)
         self.centralWidget = QtWidgets.QWidget(MainWindow)
@@ -19,7 +19,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.setContentsMargins(11, 11, 11, 11)
         self.gridLayout_2.setSpacing(6)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.table_widget = LessonTable(self.centralWidget)
+        self.table_widget = LessonTable(self.centralWidget, mode)
         self.table_widget.setFocusPolicy(QtCore.Qt.WheelFocus)
         self.table_widget.setObjectName("table_widget")
         self.table_widget.setColumnCount(0)

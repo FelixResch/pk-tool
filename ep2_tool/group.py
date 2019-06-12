@@ -59,8 +59,5 @@ class Group:
         else:
             return AttendanceType.NOT_SET
 
-
-class AttendanceType(Enum):
-    ATTENDED = 1
-    ABSENT = 2
-    NOT_SET = 3
+    def get_students(self, _):
+        return self.students

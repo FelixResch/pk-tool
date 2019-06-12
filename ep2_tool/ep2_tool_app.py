@@ -2,6 +2,8 @@ import re
 import sys
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+
+from ep2_tool.test_group import TestGroup
 from ep2_tool.ui.mainwindow import Ui_MainWindow
 from ep2_tool.group_infos import GroupInfos
 from ep2_tool.settings import Settings
@@ -11,6 +13,8 @@ from ep2_tool.dialog.gitdialog import GitDialog
 from ep2_tool.group import Group
 from ep2_tool.dialog.create_csv import CreateCSVDialog
 from ep2_tool.ep2_tutors.common import *
+from ep2_tool.dialog.test_mode_dialog import TestModeDialog
+from os import path
 
 
 class PkToolMainWindow(QMainWindow, Ui_MainWindow):
@@ -22,13 +26,27 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         Initialize everything. Connect signals and slots. Read repo.
         """
-        QMainWindow.__init__(self)
-        self.setupUi(self)
-
         self.config = create_config()
+
+        if path.exists(path.join(tutor_repo(self.config), 'tests')):
+            dialog = TestModeDialog()
+            result = dialog.exec_()
+            if result == 1:
+                self.mode = GuiMode.Test
+            else:
+                self.mode = GuiMode.Exercise
+        else:
+            self.mode = GuiMode.Exercise
+
+        self.dir = tutor_repo(self.config) if self.mode == GuiMode.Exercise else path.join(tutor_repo(self.config),
+                                                                                           'tests')
+
+        QMainWindow.__init__(self)
+        self.setupUi(self, self.mode)
 
         self.group_infos = GroupInfos(repo_path='')
         self.csv_files = dict()
+        self.test_group = None
 
         self.settings = Settings()
         self.git_interactions = GitInteractions(self.settings, self.action_commit_and_push)
@@ -79,8 +97,8 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         pass
 
-    def test_mode(self):
-        pass
+    def test_mode(self, int):
+        print(int)
 
     def read_repo(self):
         """
@@ -103,10 +121,10 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         """
         Populate the combobox with all the group names, that apply for the group type specified in the form.
         """
-
-        group_names = sorted([o for o in os.listdir(tutor_repo(self.config))
-                              if os.path.isdir(os.path.join(tutor_repo(self.config), o)) and o != '.git'
-                              and o != 'templates' and o != 'Stundenlisten' and o != 'Erfahrungsbericht'])
+        group_names = sorted([o for o in os.listdir(self.dir)
+                              if os.path.isdir(os.path.join(self.dir, o)) and o != '.git'
+                              and o != 'templates' and o != 'Stundenlisten' and o != 'Erfahrungsbericht'
+                              and o != 'tests'])
 
         if group_names:
             self.group_combobox.currentIndexChanged.disconnect()
@@ -117,7 +135,6 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
 
             self.group_combobox.currentIndexChanged.connect(self.populate_files)
             self.populate_files()
-
 
     def load_group_data(self):
         """
@@ -133,7 +150,8 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         # except KeyError:
         #     pass
 
-        group = Group(group_name, self.config, student_info(self.config, group_name))
+        group = Group(group_name, self.config,
+                      student_info(self.config, group_name)) if self.mode == GuiMode.Exercise else self.test_group
         # if self.group_type_combobox.currentIndex() == 4:
         #     group = Group(self.file_combobox.currentText())
 
@@ -183,10 +201,14 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         group_name = self.group_combobox.currentText()
         self.file_combobox.clear()
 
-        files = sorted([re.findall('attendance_(\\d*).csv', o)[0]
-                        for o in os.listdir(os.path.join(tutor_repo(self.config), group_name))
-                        if os.path.isfile(os.path.join(tutor_repo(self.config), group_name,  o))
-                        and o.startswith('attendance_')])
+        self.test_group = TestGroup(group_name, self.config, test_student_info(self.config, group_name))
+
+        regex = 'attendance_(\\d*).csv' if self.mode == GuiMode.Exercise else '(.+_slot\\d+)\\.csv'
+
+        files = sorted([re.findall(regex, o)[0]
+                        for o in os.listdir(os.path.join(self.dir, group_name))
+                        if os.path.isfile(os.path.join(self.dir, group_name, o))
+                        and re.match(regex, o)])
         self.file_combobox.addItems(files)
         self.file_combobox.setCurrentIndex(self.file_combobox.count() - 1)
         self.file_combobox.currentIndexChanged.connect(self.load_group_data)
@@ -245,3 +267,7 @@ def main():
     window = PkToolMainWindow()
     window.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()

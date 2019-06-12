@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QWidget, QCheckBox, 
 from ep2_tool.group import Group, AttendanceType, attendance_csv_fieldnames, KEY_UE_ATTENDED
 from ep2_tool.history import History
 from ep2_tool.ep2_tutors.common import *
+from ep2_tool.test_group import test_attendance_csv_fieldnames, KEY_TEST_ATTENDED
+
 
 class LessonTable(QTableWidget):
     """
@@ -14,7 +16,7 @@ class LessonTable(QTableWidget):
     Usage infos: after creating the table the method connect has to be called!
     """
 
-    def __init__(self, widget):
+    def __init__(self, widget, mode=GuiMode.Exercise):
         """
         Initialize locks and history data. Connect signals and slots.
         """
@@ -30,6 +32,7 @@ class LessonTable(QTableWidget):
         self.write_console = None
         self.test_file = False
         self.current_ue = None
+        self.mode = mode
 
         self.cellChanged.connect(self.react_to_change)
 
@@ -58,7 +61,7 @@ class LessonTable(QTableWidget):
 
             # self.history.adjust_undo_redo()
 
-    def setup_table(self, group: Group, ue):
+    def setup_table(self, group, ue):
         """
         Clear the table and history, refill the table with column names, and students default data.
         """
@@ -78,8 +81,10 @@ class LessonTable(QTableWidget):
         self.setSortingEnabled(False)
         self.setHorizontalHeaderLabels(labels)
 
-        for student in group.students:
-            self.add_row_to_table(group, group.students[student])
+        students = group.get_students(ue)
+
+        for student in students:
+            self.add_row_to_table(group, students[student])
 
         self.history = History(self.action_undo, self.action_redo, self.write_console, self.group_infos)
 
@@ -144,13 +149,18 @@ class LessonTable(QTableWidget):
         Write the opened table to a csv-file
         """
         ue = self.current_ue
-        att_csv_file = attendance_csv(self.group.config, self.group.name, ue)
+        att_csv_file = attendance_csv(self.group.config, self.group.name, ue) if self.mode == GuiMode.Exercise else \
+            test_attendance_csv(self.group.config, self.group.name, ue)
+
+        fieldnames = attendance_csv_fieldnames(ue) if self.mode == GuiMode.Exercise else \
+            test_attendance_csv_fieldnames(self.group.name)
+
         with open(att_csv_file, 'w') as outfile:
             if six.PY2:
-                writer = csv.DictWriter(outfile, fieldnames=attendance_csv_fieldnames(ue), encoding='utf-8',
+                writer = csv.DictWriter(outfile, fieldnames=fieldnames, encoding='utf-8',
                                         lineterminator='\n')
             else:
-                writer = csv.DictWriter(outfile, fieldnames=attendance_csv_fieldnames(ue), lineterminator='\n')
+                writer = csv.DictWriter(outfile, fieldnames=fieldnames, lineterminator='\n')
 
             writer.writeheader()
 
@@ -163,7 +173,10 @@ class LessonTable(QTableWidget):
                 elif self.get_checkbox(idx).checkState() == Qt.PartiallyChecked:
                     attended = '_'
 
-                writer.writerow({KEY_STUDENT_ID: student_id, KEY_UE_ATTENDED % ue: attended})
+                self.group.attendance[ue][student_id] = attended
+
+                writer.writerow({KEY_STUDENT_ID: student_id, (KEY_UE_ATTENDED if self.mode == GuiMode.Exercise else
+                                                              KEY_TEST_ATTENDED) % self.group.name: attended})
 
     def index_of_student(self, identification):
         """

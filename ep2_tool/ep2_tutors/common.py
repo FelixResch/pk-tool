@@ -152,6 +152,11 @@ def attendance_csv(config, group, ue):
     return os.path.join(tutor_repo(config), group, "attendance_" + str(ue) + ".csv")
 
 
+def test_attendance_csv(config, test, slot):
+    """Creates the path to the attendance CSV file for an exercise for a group"""
+    return os.path.join(tutor_repo(config), 'tests', test, slot + ".csv")
+
+
 def pre_eval_csv(config, group, ue):
     return os.path.join(tutor_repo(config), group, "pre_eval_%s.csv" % ue)
 
@@ -159,6 +164,11 @@ def pre_eval_csv(config, group, ue):
 def students_csv(config, group):
     """Creates the path to the attendance CSV file for an exercise for a group"""
     return os.path.join(tutor_repo(config), group, "students.csv")
+
+
+def test_students_csv(config, test):
+    """Creates the path to the attendance CSV file for an exercise for a group"""
+    return os.path.join(tutor_repo(config), 'tests', test, "students.csv")
 
 
 def local_repo(config, mat_no):
@@ -200,6 +210,10 @@ def string_normalize(str):
 
 def students_csv_fieldnames():
     return [KEY_STUDENT_ID, KEY_STUDENT_NAME_LAST, KEY_STUDENT_NAME_FIRST, KEY_STUDENT_GENDER]
+
+
+def test_students_csv_fieldnames():
+    return [KEY_STUDENT_ID, KEY_STUDENT_NAME_LAST, KEY_STUDENT_NAME_FIRST]
 
 
 def escape_csv_string(string):
@@ -247,6 +261,31 @@ def student_info(config, group):
 
     with open(stud_csv, 'r', encoding='utf-8') as infile:
         reader = csv.DictReader(infile, students_csv_fieldnames(), KEY_INVALID, strict=True)
+
+        headers = next(reader, None)
+        if not validate_headers(headers):
+            click.secho('Malformed file: %s. Invalid headers!' % stud_csv)
+            exit(1)
+
+        for row in reader:
+            if KEY_INVALID in row:
+                click.secho('Malformed file: %s' % stud_csv, fg='red')
+                exit(1)
+
+            if not check_row(row):
+                click.secho('Malformed file: %s. Missing column(s)!' % stud_csv, fg='red')
+                exit(1)
+
+            students[row[KEY_STUDENT_ID]] = row
+    return students
+
+
+def test_student_info(config, test):
+    stud_csv = test_students_csv(config, test)
+    students = {}
+
+    with open(stud_csv, 'r', encoding='utf-8') as infile:
+        reader = csv.DictReader(infile, test_students_csv_fieldnames(), KEY_INVALID, strict=True)
 
         headers = next(reader, None)
         if not validate_headers(headers):
@@ -369,3 +408,14 @@ class FileInformation:
             del self.files[file_path]
         else:
             self.add_file(file_path, Action.DELETE, push)
+
+
+class GuiMode(Enum):
+    Exercise = 1,
+    Test = 2
+
+
+class AttendanceType(Enum):
+    ATTENDED = 1
+    ABSENT = 2
+    NOT_SET = 3
