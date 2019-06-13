@@ -88,9 +88,9 @@ class LessonTable(QTableWidget):
 
         self.history = History(self.action_undo, self.action_redo, self.write_console, self.group_infos)
 
-        self.resizeColumnsToContents()
         self.setSortingEnabled(True)
-        self.sortByColumn(2, QtCore.Qt.AscendingOrder)
+        self.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        self.resizeColumnsToContents()
 
         self.react_lock = False
         self.react_to_change()
@@ -175,8 +175,8 @@ class LessonTable(QTableWidget):
 
                 self.group.attendance[ue][student_id] = attended
 
-                writer.writerow({KEY_STUDENT_ID: student_id, (KEY_UE_ATTENDED if self.mode == GuiMode.Exercise else
-                                                              KEY_TEST_ATTENDED) % self.group.name: attended})
+                writer.writerow({KEY_STUDENT_ID: student_id, (KEY_UE_ATTENDED % ue if self.mode == GuiMode.Exercise else
+                                                              KEY_TEST_ATTENDED % self.group.name): attended})
 
     def index_of_student(self, identification):
         """

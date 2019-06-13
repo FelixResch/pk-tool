@@ -68,6 +68,10 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         if not self.settings.repo_path:
             self.open_settings()
 
+        if self.mode == GuiMode.Test:
+            self.label_group.setText("Test")
+            self.label_file.setText("Slot")
+
     def show_about(self):
         """
         Opens a messagebox that shows informations about this application.
@@ -201,7 +205,8 @@ class PkToolMainWindow(QMainWindow, Ui_MainWindow):
         group_name = self.group_combobox.currentText()
         self.file_combobox.clear()
 
-        self.test_group = TestGroup(group_name, self.config, test_student_info(self.config, group_name))
+        if self.mode == GuiMode.Test:
+            self.test_group = TestGroup(group_name, self.config, test_student_info(self.config, group_name))
 
         regex = 'attendance_(\\d*).csv' if self.mode == GuiMode.Exercise else '(.+_slot\\d+)\\.csv'
 

@@ -5,7 +5,8 @@ from distutils.core import setup
 setup(
     name='ep2_tool',
     description='Tool to manage EP2 student attendance, formerly pk-tool',
-    version='0.0.3',
+    version='0.1.0',
+    license="MIT",
     author='Felix Resch',
     author_email='felix.resch@tuwien.ac.at',
     packages=['ep2_tool', 'ep2_tool.dialog', 'ep2_tool.ep2_tutors', 'ep2_tool.ui'],
